@@ -2,6 +2,10 @@
 <!-- Open_Manipulator Chain -->
 <robot name="open_manipulator" xmlns:xacro="http://ros.org/wiki/xacro">
 
+  <!-- Import RealSense D435i -->
+  <xacro:arg name="use_nominal_extrinsics" default="false" />
+  <xacro:include filename="$(find realsense2_description)/urdf/_d435i.urdf.xacro"/>
+
   <!-- Import Rviz colors -->
   <xacro:include filename="$(find rgbd-pepper-pose-estimation-ros)/urdf/materials.xacro" />
 
