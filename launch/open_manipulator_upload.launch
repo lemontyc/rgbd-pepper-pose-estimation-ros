@@ -1,0 +1,4 @@
+<launch>
+  <param name="robot_description"
+         command="$(find xacro)/xacro --inorder '$(find rgbd-pepper-pose-estimation-ros)/urdf/open_manipulator_robot.urdf.xacro'"/>
+</launch>
