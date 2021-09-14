@@ -1,14 +1,31 @@
 <launch>
-  <include file="$(find rgbd-pepper-pose-estimation-ros)/launch/open_manipulator_upload.launch"/>
+    <!-- Start Open Manipulator X ROS controller -->
+    <include file="$(find open_manipulator_controller)/launch/open_manipulator_controller.launch">
+        <arg name="usb_port" value="/dev/ttyACM0"/>
+        <arg name="baud_rate" value="1000000"/>
+    </include>
 
-  <!-- Send joint values -->
-  <node pkg="joint_state_publisher" type="joint_state_publisher" name="joint_state_publisher">
-    <rosparam param="source_list" subst_value="true">["joint_states"]</rosparam>
-  </node>
+    <!-- Launch Open Manipulator X ROS GUI -->
+    <include file="$(find open_manipulator_control_gui)/launch/open_manipulator_control_gui.launch"/>
 
-  <!-- Combine joint values to TF-->
-  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+    <!-- Launch RealSense D435i camera node -->
+    <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+        <arg name="filters" value="pointcloud"/>
+    </include>
 
-  <!-- Show in Rviz -->
-  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rgbd-pepper-pose-estimation-ros)/rviz/open_manipulator.rviz"/>
+    <include file="$(find rgbd-pepper-pose-estimation-ros)/launch/open_manipulator_upload.launch"/>
+
+    <!-- Send joint values -->
+    <node pkg="joint_state_publisher" type="joint_state_publisher" name="joint_state_publisher">
+      <rosparam param="source_list" subst_value="true">["joint_states"]</rosparam>
+    </node>
+
+    <!-- Combine joint values to TF-->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+
+    <!-- Show in Rviz -->
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rgbd-pepper-pose-estimation-ros)/rviz/open_manipulator.rviz"/>
+
+
+
 </launch>
