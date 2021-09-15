@@ -5,7 +5,7 @@ import rospy
 from open_manipulator_msgs.srv import *
 
 def set_position_client(x, y, z, time):
-    service_name = '/goal_joint_space_path'
+    service_name = '/goal_task_space_path_position_only'
 
     rospy.wait_for_service(service_name)
 
