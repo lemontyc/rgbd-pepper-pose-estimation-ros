@@ -4,6 +4,10 @@
       <!-- <rosparam param="source_list" subst_value="true">["joint_states"]</rosparam> -->
     </node>
 
+    <node pkg="rgbd-pepper-pose-estimation-ros" type="inference.py" name="image_inference" ns="peppers">
+      <!-- <rosparam param="source_list" subst_value="true">["joint_states"]</rosparam> -->
+    </node>
+
 
 
 </launch>

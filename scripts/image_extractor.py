@@ -3,10 +3,6 @@
 import rospy
 from sensor_msgs.msg import Image as msg_Image
 from sensor_msgs.msg import CameraInfo
-from cv_bridge import CvBridge, CvBridgeError
-
-
-
 
 class ImageExtractor:
     def __init__(self, rgb_image_topic, depth_image_topic, depth_info_topic, 
