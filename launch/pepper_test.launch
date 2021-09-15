@@ -1,0 +1,9 @@
+<launch>
+    <!-- Send joint values -->
+    <node pkg="rgbd-pepper-pose-estimation-ros" type="image_extractor.py" name="image_extractor" ns="peppers">
+      <!-- <rosparam param="source_list" subst_value="true">["joint_states"]</rosparam> -->
+    </node>
+
+
+
+</launch>
