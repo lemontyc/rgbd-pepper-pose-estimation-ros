@@ -34,6 +34,7 @@
     <!-- Show in Rviz -->
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rgbd-pepper-pose-estimation-ros)/rviz/open_manipulator.rviz"/>
 
-
+    <arg name="node_start_delay" default="5.0" />  
+    <node name="op_home_position" pkg="rgbd-pepper-pose-estimation-ros" type="home_pos.py" ns="peppers" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " />
 
 </launch>

@@ -9,6 +9,14 @@ def delete_all(m_rcnn_path, path):
     for f in files:
         os.remove(f) 
 
+def delete_all_except(m_rcnn_path, path, file):
+   #%% Delete all files at path
+    files = glob.glob(m_rcnn_path +'/' + path + '/*')
+    for f in files:
+        if f.split('/')[-1] != file + '.png':
+            os.remove(f) 
+
+
 def save_image(image, name, m_rcnn_path, save_path):
     im = Image.fromarray(image)
     # Create image first, and then copy to start inference process

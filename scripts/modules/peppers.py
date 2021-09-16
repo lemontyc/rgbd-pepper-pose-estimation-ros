@@ -18,6 +18,10 @@ class Peppers:
 
     def read_JSON(self):
         self.json_file = next(os.walk(self.m_rcnn_path + '/' + self.m_rcnn_json_path))[2]
+
+    def read_input_images(self):
+        return next(os.walk(self.m_rcnn_path + '/input' ))[2]
+
         
     def get_JSON_name(self):
         self.read_JSON()
@@ -38,10 +42,10 @@ class Peppers:
         radians = math.atan2(peduncle_y - pepper_y, peduncle_x - pepper_x)
         return math.degrees(radians)
 
-    def read_json_data(self, camera):
+    def read_json_data(self, color_image_frame_number):
         file_name = self.json_file[0]
 
-        if file_name.split('.')[0] == str(camera.frame_number):
+        if file_name.split('.')[0] == str(color_image_frame_number):
             print("Processing bboxes of {}".format(file_name))
             with open(os.path.join(self.m_rcnn_path + '/' + self.m_rcnn_json_path + '/', file_name)) as json_file:
                 self.json_data = json.load(json_file)
