@@ -48,9 +48,12 @@ class Peppers:
         if file_name.split('.')[0] == str(color_image_frame_number):
             print("Processing bboxes of {}".format(file_name))
             with open(os.path.join(self.m_rcnn_path + '/' + self.m_rcnn_json_path + '/', file_name)) as json_file:
-                self.json_data = json.load(json_file)
-                self.json_data = np.array(self.json_data, dtype=object)
-            return True
+                try:
+                    self.json_data = json.load(json_file)
+                    self.json_data = np.array(self.json_data, dtype=object)
+                    return True
+                except:
+                    return False
         else:
             return False
         
