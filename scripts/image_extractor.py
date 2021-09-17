@@ -20,7 +20,7 @@ class ImageExtractor:
         self.pub_depth_info     = rospy.Publisher(depth_info_pub, CameraInfo, queue_size=10)
 
 
-        self.timer  = rospy.Timer(rospy.Duration(5), self.timer_callback)
+        self.timer  = rospy.Timer(rospy.Duration(3), self.timer_callback)
 
     def save_color_image_callback(self, data):
         self.color_image = data
