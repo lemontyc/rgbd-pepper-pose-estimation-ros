@@ -1,9 +1,9 @@
 <launch>
-    <!-- Send joint values -->
+    <!-- Image extractor node -->
     <node pkg="rgbd-pepper-pose-estimation-ros" type="image_extractor.py" name="image_extractor" ns="peppers">
       <!-- <rosparam param="source_list" subst_value="true">["joint_states"]</rosparam> -->
     </node>
-
+    <!-- Node that will produce 3D coordinates of peppers -->
     <node pkg="rgbd-pepper-pose-estimation-ros" type="inference.py" name="image_inference" ns="peppers" output="screen">
       <!-- <rosparam param="source_list" subst_value="true">["joint_states"]</rosparam> -->
     </node>

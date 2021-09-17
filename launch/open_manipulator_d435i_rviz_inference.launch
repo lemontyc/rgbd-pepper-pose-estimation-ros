@@ -1,0 +1,49 @@
+<launch>
+    <!-- Start Open Manipulator X ROS controller -->
+    <include file="$(find open_manipulator_controller)/launch/open_manipulator_controller.launch">
+        <arg name="usb_port" value="/dev/ttyACM0"/>
+        <arg name="baud_rate" value="1000000"/>
+    </include>
+
+    <!-- Launch Open Manipulator X ROS GUI -->
+    <include file="$(find open_manipulator_control_gui)/launch/open_manipulator_control_gui.launch"/>
+
+    <!-- Launch RealSense D435i camera node -->
+    <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+        <arg name="color_width" value="1280"/>
+        <arg name="color_height" value="720"/>
+        <arg name="color_fps" value="15"/>
+
+        <arg name="depth_width" value="1280"/>
+        <arg name="depth_height" value="720"/>
+        <arg name="depth_fps" value="15"/>
+
+        <arg name="align_depth" value="true"/>
+        <arg name="filters" value="pointcloud"/>
+    </include> 
+    <include file="$(find rgbd-pepper-pose-estimation-ros)/launch/open_manipulator_upload.launch"/>
+
+    <!-- Send joint values -->
+    <node pkg="joint_state_publisher" type="joint_state_publisher" name="joint_state_publisher">
+      <rosparam param="source_list" subst_value="true">["joint_states"]</rosparam>
+    </node>
+
+    <!-- Combine joint values to TF-->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+
+    <!-- Show in Rviz -->
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rgbd-pepper-pose-estimation-ros)/rviz/open_manipulator.rviz"/>
+
+    <arg name="node_start_delay" default="5.0" />  
+    <node name="op_home_position" pkg="rgbd-pepper-pose-estimation-ros" type="home_pos.py" ns="peppers" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " />
+
+    <!-- Image extractor node -->
+    <node pkg="rgbd-pepper-pose-estimation-ros" type="image_extractor.py" name="image_extractor" ns="peppers">
+      <!-- <rosparam param="source_list" subst_value="true">["joint_states"]</rosparam> -->
+    </node>
+    <!-- Node that will produce 3D coordinates of peppers -->
+    <node pkg="rgbd-pepper-pose-estimation-ros" type="inference.py" name="image_inference" ns="peppers" output="screen">
+      <!-- <rosparam param="source_list" subst_value="true">["joint_states"]</rosparam> -->
+    </node>
+    
+</launch>
