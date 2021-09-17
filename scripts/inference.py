@@ -117,10 +117,11 @@ class ImageInference:
                     # Convert openCV image to ROS Image and publish
                     imgMsg = self.bridge.cv2_to_imgmsg(self.color_image_np, "rgb8")
                     self.pub_rgb_image.publish(imgMsg)
-
+                    # Obtain x, y, and z coordinates in "link1" frame_id (base of robot arm)
+                    # Fills bboxes which is a 3D bbox array for visualization in RVIZ
                     self.camera.obtain_coordinates(self.peppers, self.depth_image_np, bboxes)
 
-                    bboxes.header.frame_id = "camera_color_optical_frame"
+                    bboxes.header.frame_id = "link1"
                     
                     self.pub_bbox_3d.publish(bboxes)
 

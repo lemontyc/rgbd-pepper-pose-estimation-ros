@@ -42,19 +42,20 @@ class Realsense:
         temp_point = PointStamped()
         converted_point = [0,0,0]
         try:
-            
             temp_point.header.frame_id = 'camera_color_optical_frame'
             temp_point.header.stamp = rospy.Time.now()
             temp_point.point.x = coordinates[0]
             temp_point.point.y = coordinates[1]
             temp_point.point.z = coordinates[2]
             
-            converted_point = self.tfBuffer.transform(temp_point, 'world', rospy.Duration(1.0))
-
+            converted_point = self.tfBuffer.transform(temp_point, 'link1', rospy.Duration(1.0))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
             raise
 
         return [converted_point.point.x, converted_point.point.y, converted_point.point.z]
+
+    def convert_to_meters(self, coordinates):
+        return [coordinates[0]/1000.0, coordinates[1]/1000.0, coordinates[2]/1000.0]
 
     def obtain_coordinates(self, peppers, depth_image_np, bboxes):
             try:
@@ -76,27 +77,64 @@ class Realsense:
 
                         # Get the centroid of the bbox
                         pepper_center      = [pepper_data["2d_info"]["fruit"]["center"]["x"], pepper_data["2d_info"]["fruit"]["center"]["y"]]
-
+                        # Get x,y,z coordinates in mm.
                         coordinates = rs2.rs2_deproject_pixel_to_point(self.intrinsics, pepper_center, bbox_centroid_pixel_depth_value)
 
-                        # new_coordinates = self.tf_optical_frame_to_link1(coordinates)
-                        new_coordinates = coordinates
+                        coordinates = self.convert_to_meters(coordinates)
+                        # Convert from camera frame to robot frame
+                        coordinates = self.tf_optical_frame_to_link1(coordinates)
                         
+                        bbox.header.frame_id = "link1"
+                        bbox.pose.position.x = coordinates[0]
+                        bbox.pose.position.y = coordinates[1]
+                        bbox.pose.position.z = coordinates[2]
+                        bbox.pose.orientation.w = 1
+                        bbox.dimensions.y = (xmax_depth - xmin_depth)/2000.0 
+                        bbox.dimensions.z = (ymax_depth - ymin_depth)/2000.0
+                        bbox.dimensions.x = (bbox.dimensions.x + bbox.dimensions.z)/2.0
+                        bbox.label = 1 # 1 for fruit, 2 for peduncle
 
-                        if new_coordinates:
-                            bbox.header.frame_id = "camera_color_optical_frame"
-                            bbox.pose.position.x = new_coordinates[0]/1000.0
-                            bbox.pose.position.y = new_coordinates[1]/1000.0
-                            bbox.pose.position.z = new_coordinates[2]/1000.0
-                            bbox.pose.orientation.w = 1
-
-                            bbox.dimensions.x = (xmax_depth - xmin_depth)/2000.0
-                            bbox.dimensions.y = (ymax_depth - ymin_depth)/2000.0
-                            bbox.dimensions.z = (bbox.dimensions.x + bbox.dimensions.z)/2.0
-                            bbox.label = 1 # 1 for fruit, 2 for peduncle
+                        # If peduncle exist, get depth coordinates at peduncle bbox center
+                        if "peduncle" in pepper_data["2d_info"]:
+                            # Mark pepper value with the bbox index of its peduncle
+                            bbox.value = int(len(bboxes.boxes)) + 1
                             bboxes.boxes.append(bbox)
+                            # Reset bbox for peduncle
+                            bbox = BoundingBox()
+                            peduncle_2d_data  = pepper_data["2d_info"]["peduncle"]
 
-                        # print("{} {} {}".format(coordinates[0], coordinates[1], coordinates[2]))
+                            xmin_depth = int((peduncle_2d_data["x_min"] * peppers.expected))
+                            ymin_depth = int((peduncle_2d_data["y_min"] * peppers.expected))
+                            xmax_depth = int((peduncle_2d_data["x_max"] * peppers.expected))
+                            ymax_depth = int((peduncle_2d_data["y_max"] * peppers.expected))
+
+                            # Get depth values at the bbox location
+                            bbox_area_depth = depth_image_np[ymin_depth:ymax_depth,  xmin_depth:xmax_depth]
+                            # Obtain average depth value, this will be used to obtain the centroid coordinates
+                            bbox_centroid_pixel_depth_value,_,_,_ = cv2.mean(bbox_area_depth)
+
+                            # Get the centroid of the bbox
+                            pepper_center      = [pepper_data["2d_info"]["peduncle"]["center"]["x"], pepper_data["2d_info"]["peduncle"]["center"]["y"]]
+                            # Get x,y,z coordinates in mm.
+                            coordinates = rs2.rs2_deproject_pixel_to_point(self.intrinsics, pepper_center, bbox_centroid_pixel_depth_value)
+
+                            coordinates = self.convert_to_meters(coordinates)
+                            # Convert from camera frame to robot frame
+                            coordinates = self.tf_optical_frame_to_link1(coordinates)
+                            
+                            bbox.header.frame_id = "link1"
+                            bbox.pose.position.x = bboxes.boxes[-1].pose.position.x 
+                            bbox.pose.position.y = coordinates[1]
+                            bbox.pose.position.z = coordinates[2]
+                            bbox.pose.orientation.w = 2
+                            bbox.dimensions.y = (xmax_depth - xmin_depth)/2000.0 
+                            bbox.dimensions.z = (ymax_depth - ymin_depth)/2000.0
+                            bbox.dimensions.x = (bbox.dimensions.x + bbox.dimensions.z)/2.0
+                            bbox.label = 2 # 1 for fruit, 2 for peduncle
+
+                        bboxes.boxes.append(bbox)
+                        
+                        
 
                         
 
