@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <!-- Open_Manipulator Chain -->
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
+<xacro:property name="M_PI" value="3.1415926535897931" />
 
   <!-- Link 1 -->
   <link name="link1">
@@ -268,8 +269,8 @@
   <!-- Realsense Camera Joint Position -->
   <joint name="realsense_camera_joint" type="fixed">
     <axis xyz="0 1 0" />
-    <origin xyz="0.06 0.0 0.039" rpy="0 0 0"/> 
-    <parent link="link5"/>
+    <origin xyz="0.18 -0.88 0.2" rpy="0 0 ${M_PI/2}"/> 
+    <parent link="link1"/>
     <child link="base_link"/>
   </joint>
 

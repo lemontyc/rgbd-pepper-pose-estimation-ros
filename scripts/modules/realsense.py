@@ -86,12 +86,13 @@ class Realsense:
                         
                         bbox.header.frame_id = "link1"
                         bbox.pose.position.x = coordinates[0]
-                        bbox.pose.position.y = coordinates[1]
+                        bbox.pose.position.y = coordinates[1] + 0.04
                         bbox.pose.position.z = coordinates[2]
                         bbox.pose.orientation.w = 1
-                        bbox.dimensions.y = (xmax_depth - xmin_depth)/2000.0 
-                        bbox.dimensions.z = (ymax_depth - ymin_depth)/2000.0
-                        bbox.dimensions.x = (bbox.dimensions.x + bbox.dimensions.z)/2.0
+                        
+                        bbox.dimensions.z = (xmax_depth - xmin_depth)/2000.0 
+                        bbox.dimensions.x = (ymax_depth - ymin_depth)/2000.0
+                        bbox.dimensions.y = (bbox.dimensions.x + bbox.dimensions.z)/2.0
                         bbox.label = 1 # 1 for fruit, 2 for peduncle
 
                         # If peduncle exist, get depth coordinates at peduncle bbox center
@@ -123,13 +124,14 @@ class Realsense:
                             coordinates = self.tf_optical_frame_to_link1(coordinates)
                             
                             bbox.header.frame_id = "link1"
-                            bbox.pose.position.x = bboxes.boxes[-1].pose.position.x 
-                            bbox.pose.position.y = coordinates[1]
+                            bbox.pose.position.x = coordinates[0]
+                            bbox.pose.position.y = bboxes.boxes[-1].pose.position.y 
                             bbox.pose.position.z = coordinates[2]
                             bbox.pose.orientation.w = 2
-                            bbox.dimensions.y = (xmax_depth - xmin_depth)/2000.0 
+
                             bbox.dimensions.z = (ymax_depth - ymin_depth)/2000.0
-                            bbox.dimensions.x = (bbox.dimensions.x + bbox.dimensions.z)/2.0
+                            bbox.dimensions.x = (xmax_depth - xmin_depth)/2000.0 
+                            bbox.dimensions.y = (bbox.dimensions.x + bbox.dimensions.z)/2.0
                             bbox.label = 2 # 1 for fruit, 2 for peduncle
 
                         bboxes.boxes.append(bbox)
