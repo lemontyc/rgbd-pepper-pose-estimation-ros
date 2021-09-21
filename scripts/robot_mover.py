@@ -28,6 +28,30 @@ class Robot:
         except rospy.ServiceException as e:
             print ("Service call failed: ()".format(e))
 
+        self.shutdown = rospy.on_shutdown(self.shutdown_callback)
+
+    def shutdown_callback(self):
+        service_name = '/goal_joint_space_path'
+
+        rospy.wait_for_service(service_name)
+
+        try:
+            set_position = rospy.ServiceProxy(service_name, SetJointPosition)
+
+            joint_name = ["joint1", "joint2", "joint3", "joint4"]
+            joint_angle = [0.0, 0.127, 0.29, 1.144]
+            
+            arg = SetJointPositionRequest()
+            arg.joint_position.joint_name = joint_name
+            arg.joint_position.position = joint_angle
+            arg.path_time = 2.0
+            resp1 = set_position(arg)
+            print('Service done!')
+            return resp1
+        except rospy.ServiceException as e:
+            print ("Service call failed: ()".format(e))
+            return False
+
     def states_callback(self, data):
         self.states = data
         
@@ -55,10 +79,13 @@ class Robot:
                             new_coordinates.end_effector_name = "gripper"
                             new_coordinates.path_time = 3.0
 
-                            new_coordinates.kinematics_pose.pose.position = self.saved_peduncle_bbox.pose.position
+                            new_coordinates.kinematics_pose.pose.position.x = round(self.saved_peduncle_bbox.pose.position.x, 3)
+                            new_coordinates.kinematics_pose.pose.position.y = round(self.saved_peduncle_bbox.pose.position.y, 3)
+                            new_coordinates.kinematics_pose.pose.position.z = round(self.saved_peduncle_bbox.pose.position.z, 3) + 0.05
 
                             self.last_response = self.set_position(new_coordinates)
-                            print(" {} {}".format(new_coordinates.kinematics_pose.pose.position , self.last_response))
+                            if self.last_response == True:
+                                print(" {} {}".format(new_coordinates.kinematics_pose.pose.position , self.last_response))
                         # if self.last_response.is_planned:
                         #     # rospy.signal_shutdown("Coordinate found")
                         except rospy.ServiceException as e:
@@ -70,10 +97,13 @@ class Robot:
                             new_coordinates.end_effector_name = "gripper"
                             new_coordinates.path_time = 2.0
 
-                            new_coordinates.kinematics_pose.pose.position = self.saved_peduncle_bbox.pose.position
+                            new_coordinates.kinematics_pose.pose.position.x = round(self.saved_peduncle_bbox.pose.position.x, 3)
+                            new_coordinates.kinematics_pose.pose.position.y = round(self.saved_peduncle_bbox.pose.position.y, 3)
+                            new_coordinates.kinematics_pose.pose.position.z = round(self.saved_peduncle_bbox.pose.position.z, 3)+ 0.05
 
                             self.last_response = self.set_position(new_coordinates)
-                            print(" {} {}".format(new_coordinates.kinematics_pose.pose.position , self.last_response))
+                            if self.last_response == True:
+                                print(" {} {}".format(new_coordinates.kinematics_pose.pose.position , self.last_response))
                         # if self.last_response.is_planned:
                         #     # rospy.signal_shutdown("Coordinate found")
                         except rospy.ServiceException as e:

@@ -1,6 +1,6 @@
 <launch>
     <!-- Image extractor node -->
-    <node pkg="rgbd-pepper-pose-estimation-ros" type="move_robot.py" name="robot_mover" ns="peppers" output="screen">
+    <node pkg="rgbd-pepper-pose-estimation-ros" type="robot_mover.py" name="robot_mover" ns="peppers" output="screen">
       <!-- <rosparam param="source_list" subst_value="true">["joint_states"]</rosparam> -->
     </node>
 
