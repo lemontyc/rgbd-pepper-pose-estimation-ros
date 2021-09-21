@@ -107,7 +107,7 @@ class ImageInference:
                     self.peppers.parse_json_data()
                     # Draw all detected objects here
                     self.gui.draw_all_objects_bbox(self.color_image_np, self.peppers.complete_pepper_list, (199, 240, 218), (129, 176, 247), 2)
-                    self.peppers.filter_peppers(100)
+                    self.peppers.filter_peppers(50)
                     self.peppers.find_peduncles()
                     # Redraw only the peppers that passed the filter
                     self.gui.draw_all_objects_bbox(self.color_image_np, self.peppers.final_pepper_list, (57, 219, 98), (10, 88, 204),4)

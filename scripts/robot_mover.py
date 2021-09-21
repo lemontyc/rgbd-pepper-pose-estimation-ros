@@ -4,133 +4,147 @@ import rospy
 from open_manipulator_msgs.srv import *
 from open_manipulator_msgs.msg import OpenManipulatorState, KinematicsPose
 from jsk_recognition_msgs.msg import BoundingBoxArray, BoundingBox
-
+import pprint
 class Robot:
-    def __init__(self, topics, robot_service):
+    def __init__(self, topics, services):
         self.states                 = OpenManipulatorState()
         self.gripper_pose           = KinematicsPose()
         self.pepper_bboxes          = BoundingBoxArray()
-        self.saved_pepper_bbox      = BoundingBox()
-        self.saved_peduncle_bbox    = None
-        self.harvest = 0
-        self.last_response = False
-        self.first_run  = False
 
         self.sub_states         = rospy.Subscriber(topics[0], OpenManipulatorState, self.states_callback)
         self.sub_gripper_pose   = rospy.Subscriber(topics[1], KinematicsPose, self.gripper_pose_callback)
         self.sub_pepper_bboxes  = rospy.Subscriber(topics[2], BoundingBoxArray, self.pepper_bboxes_callback)
 
-        self.ser_robot  = rospy.wait_for_service(robot_service)
+        self.ser_task_space     = rospy.wait_for_service(services[0])
+        self.ser_joint_space    = rospy.wait_for_service(services[1])
 
-        self.timer_reset = rospy.Timer(rospy.Duration(15), self.timer_reset_callback)
+        # self.timer_reset = rospy.Timer(rospy.Duration(15), self.timer_reset_callback)
+
         try:
-            self.set_position = rospy.ServiceProxy(robot_service, SetKinematicsPose)
+            self.set_task_space_position    = rospy.ServiceProxy(services[0], SetKinematicsPose)
         except rospy.ServiceException as e:
-            print ("Service call failed: ()".format(e))
+            print ("Service startup failed: ({})".format(e))
+
+        try:
+            self.set_joint_space_position   = rospy.ServiceProxy(services[1], SetJointPosition)
+        except rospy.ServiceException as e:
+            print ("Service startup failed: ({})".format(e))
 
         self.shutdown = rospy.on_shutdown(self.shutdown_callback)
 
-    def shutdown_callback(self):
-        service_name = '/goal_joint_space_path'
 
-        rospy.wait_for_service(service_name)
 
-        try:
-            set_position = rospy.ServiceProxy(service_name, SetJointPosition)
-
-            joint_name = ["joint1", "joint2", "joint3", "joint4"]
-            joint_angle = [0.0, 0.127, 0.29, 1.144]
-            
-            arg = SetJointPositionRequest()
-            arg.joint_position.joint_name = joint_name
-            arg.joint_position.position = joint_angle
-            arg.path_time = 2.0
-            resp1 = set_position(arg)
-            print('Service done!')
-            return resp1
-        except rospy.ServiceException as e:
-            print ("Service call failed: ()".format(e))
-            return False
 
     def states_callback(self, data):
         self.states = data
-        
-        # If manipulator has stopped moving, try to harvest
-        if "ACTUATOR_ENABLED" in self.states.open_manipulator_actuator_state:
-            if "STOPPED" in self.states.open_manipulator_moving_state:
-                # If there are still peppers
-                if len(self.pepper_bboxes.boxes):
-                    self.saved_pepper_bbox = self.pepper_bboxes.boxes[self.harvest]
-
-                    self.saved_peduncle_bbox = BoundingBox()
-                    # Check for peduncle associated to pepper
-                    # The bbox.value corresponds to the bbox index of a peduncle
-                    if self.saved_pepper_bbox.value > 0:
-                        self.saved_peduncle_bbox = self.pepper_bboxes.boxes[int(self.saved_pepper_bbox.value)]
-                    # Touch the pepper
-                    else:
-                        self.saved_peduncle_bbox = self.saved_pepper_bbox
-                    # print(" {} {}".format(self.saved_peduncle_bbox.pose.position.x, self.gripper_pose.pose.position.x))
-                    # print(abs(self.saved_peduncle_bbox.pose.position.x - self.gripper_pose.pose.position.x))
-                    if not self.first_run:
-                        self.first_run  = True
-                        try:
-                            new_coordinates = SetKinematicsPoseRequest()
-                            new_coordinates.end_effector_name = "gripper"
-                            new_coordinates.path_time = 3.0
-
-                            new_coordinates.kinematics_pose.pose.position.x = round(self.saved_peduncle_bbox.pose.position.x, 3)
-                            new_coordinates.kinematics_pose.pose.position.y = round(self.saved_peduncle_bbox.pose.position.y, 3)
-                            new_coordinates.kinematics_pose.pose.position.z = round(self.saved_peduncle_bbox.pose.position.z, 3) + 0.05
-
-                            self.last_response = self.set_position(new_coordinates)
-                            if self.last_response == True:
-                                print(" {} {}".format(new_coordinates.kinematics_pose.pose.position , self.last_response))
-                        # if self.last_response.is_planned:
-                        #     # rospy.signal_shutdown("Coordinate found")
-                        except rospy.ServiceException as e:
-                            print ("Service call failed: ()".format(e))
-
-                    if not self.last_response.is_planned:
-                        try:
-                            new_coordinates = SetKinematicsPoseRequest()
-                            new_coordinates.end_effector_name = "gripper"
-                            new_coordinates.path_time = 2.0
-
-                            new_coordinates.kinematics_pose.pose.position.x = round(self.saved_peduncle_bbox.pose.position.x, 3)
-                            new_coordinates.kinematics_pose.pose.position.y = round(self.saved_peduncle_bbox.pose.position.y, 3)
-                            new_coordinates.kinematics_pose.pose.position.z = round(self.saved_peduncle_bbox.pose.position.z, 3)+ 0.05
-
-                            self.last_response = self.set_position(new_coordinates)
-                            if self.last_response == True:
-                                print(" {} {}".format(new_coordinates.kinematics_pose.pose.position , self.last_response))
-                        # if self.last_response.is_planned:
-                        #     # rospy.signal_shutdown("Coordinate found")
-                        except rospy.ServiceException as e:
-                            print ("Service call failed: ()".format(e))
-
 
     def gripper_pose_callback(self, data):
         self.gripper_pose = data
-    
+
     def pepper_bboxes_callback(self, data):
         self.pepper_bboxes = data
+        targets = BoundingBoxArray()
+        targets_counter = [0,0] # 0: Fruit, 1: Peduncle
 
-    def timer_reset_callback(self, event):
-        self.last_response.is_planned = False
+        if self.pepper_bboxes.boxes and "STOPPED" in self.states.open_manipulator_moving_state:
+            # rospy.loginfo("{} new boxes received".format(len(self.pepper_bboxes.boxes)))
 
-    def timer_reset_callback(self, event):
-        self.last_response.is_planned = False
+            for object in self.pepper_bboxes.boxes:
+                target = BoundingBox()
+                # Search for peduncle. If Pepper.value > 0, pepper.value is the bbox index of its peduncle
+                if object.value > 0.0:
+                    target = self.pepper_bboxes.boxes[int(object.value)]
+                    targets_counter[1] = targets_counter[1] + 1
+                    targets.boxes.append(target)
+                else:
+                    if object.label != 2:
+                        # If no peduncle was found, move towards the pepper
+                        target = object
+                        targets_counter[0] = targets_counter[0] + 1
+                        targets.boxes.append(target)
+            rospy.loginfo("{} peppers, {} targets: {} peduncles and {} fruits".format(len(self.pepper_bboxes.boxes), len(targets.boxes), targets_counter[1], targets_counter[0]))
+            # pprint.pprint(targets)
+
+            for count, target in enumerate(targets.boxes):
+                self.move_to_coordinates(count, [   round(target.pose.position.x, 3),
+                                                    round(target.pose.position.y, 3),
+                                                    round(target.pose.position.z, 3)])
+                self.home_position()
+
+    def move_to_coordinates(self, count, coordinates):
+        new_coordinates = SetKinematicsPoseRequest()
+        new_coordinates.end_effector_name = "gripper"
+        new_coordinates.path_time = 2.0
+        # Obtain current gripper position
+        new_coordinates.kinematics_pose.pose = self.gripper_pose.pose
+        new_coordinates.kinematics_pose.pose.position.x = coordinates[0]
+        # new_coordinates.kinematics_pose.pose.position.x = coordinates[0]
+        new_coordinates.kinematics_pose.pose.position.y = coordinates[1]
+        # new_coordinates.kinematics_pose.pose.position.z = coordinates[2]
+        try:
+            rospy.loginfo("Trying to reach target {} at x: {} y: {} z: {}".format(count,
+                new_coordinates.kinematics_pose.pose.position.x,
+                new_coordinates.kinematics_pose.pose.position.y,
+                new_coordinates.kinematics_pose.pose.position.z
+            ))
+            # print(abs(self.gripper_pose.pose.position.y - new_coordinates.kinematics_pose.pose.position.y))
+            # while(abs(self.gripper_pose.pose.position.y - new_coordinates.kinematics_pose.pose.position.y) > 0.01):
+            #     print(abs(self.gripper_pose.pose.position.y - new_coordinates.kinematics_pose.pose.position.y))
+
+            resp = self.set_task_space_position(new_coordinates)
+            rospy.loginfo(resp)
+            if resp.is_planned == True:
+                
+                rospy.sleep(2)
+            new_coordinates.kinematics_pose.pose.position.z = coordinates[2]
+            resp = self.set_task_space_position(new_coordinates)
+            rospy.loginfo(resp)
+            if resp.is_planned == True:
+                
+                rospy.sleep(2)
+
+        except rospy.ServiceException as e:
+            print ("Service call failed: ()".format(e))
+
+    def home_position(self):
+        joint_name = ["joint1", "joint2", "joint3", "joint4"]
+        joint_angle = [0.0, -1.052, 0.377, 0.703]
+        try:
+            arg = SetJointPositionRequest()
+            arg.joint_position.joint_name   = joint_name
+            arg.joint_position.position     = joint_angle
+            arg.path_time                   = 2.5
+            resp = self.set_joint_space_position(arg)
+            rospy.sleep(2.5)
+            rospy.loginfo("Robot succesfully sent to home position")
+        except rospy.ServiceException as e:
+            print ("Service call failed: ({})".format(e))
+
+    def shutdown_callback(self):
+        joint_name = ["joint1", "joint2", "joint3", "joint4"]
+        joint_angle = [0.0, 0.127, 0.29, 1.144]
+
+        try:
+            arg = SetJointPositionRequest()
+            arg.joint_position.joint_name   = joint_name
+            arg.joint_position.position     = joint_angle
+            arg.path_time                   = 2.5
+            resp = self.set_joint_space_position(arg)
+            rospy.loginfo("Robot succesfully sent to shutdown position")
+        except rospy.ServiceException as e:
+            print ("Service call failed: ({})".format(e))
 
 def main():
-    states_topic        = '/states'
-    gripper_pose_topic  = '/gripper/kinematics_pose'
-    pepper_bboxes       = '/peppers/bbox_3D'
-    topics = [states_topic, gripper_pose_topic, pepper_bboxes]
+    states_topic                = '/states'
+    gripper_pose_topic          = '/gripper/kinematics_pose'
+    pepper_bboxes               = '/peppers/bbox_3D'
+    topics                      = [states_topic, gripper_pose_topic, pepper_bboxes]
 
-    robot_service       =   '/goal_task_space_path_position_only'
+    robot_task_space_service    =   '/goal_task_space_path_position_only'
+    robot_joint_space_service   =   '/goal_joint_space_path'
+    services                    = [robot_task_space_service, robot_joint_space_service]
 
-    node = Robot(topics, robot_service)
+    node = Robot(topics, services)
 
     rospy.spin()
 

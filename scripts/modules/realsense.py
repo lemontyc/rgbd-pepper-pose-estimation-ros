@@ -127,7 +127,7 @@ class Realsense:
                             bbox.pose.position.x = coordinates[0]
                             bbox.pose.position.y = bboxes.boxes[-1].pose.position.y 
                             bbox.pose.position.z = coordinates[2]
-                            bbox.pose.orientation.w = 2
+                            bbox.pose.orientation.w = 1
 
                             bbox.dimensions.z = (ymax_depth - ymin_depth)/2000.0
                             bbox.dimensions.x = (xmax_depth - xmin_depth)/2000.0 

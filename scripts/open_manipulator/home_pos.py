@@ -13,7 +13,7 @@ def set_home_position():
         set_position = rospy.ServiceProxy(service_name, SetJointPosition)
 
         joint_name = ["joint1", "joint2", "joint3", "joint4"]
-        joint_angle = [0.0, -1.51, 0.0, 1.53]
+        joint_angle = [0.0, -1.052, 0.377, 0.703]
         
         arg = SetJointPositionRequest()
         arg.joint_position.joint_name = joint_name
