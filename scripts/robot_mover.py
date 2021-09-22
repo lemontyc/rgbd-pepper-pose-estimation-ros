@@ -62,7 +62,7 @@ class Robot:
                         target = object
                         targets_counter[0] = targets_counter[0] + 1
                         targets.boxes.append(target)
-            rospy.loginfo("{} peppers, {} targets: {} peduncles and {} fruits".format(len(self.pepper_bboxes.boxes), len(targets.boxes), targets_counter[1], targets_counter[0]))
+            rospy.loginfo("{} objects, {} targets: {} peduncles and {} fruits".format(len(self.pepper_bboxes.boxes), len(targets.boxes), targets_counter[1], targets_counter[0]))
             # pprint.pprint(targets)
 
             for count, target in enumerate(targets.boxes):
@@ -72,36 +72,116 @@ class Robot:
                 self.home_position()
 
     def move_to_coordinates(self, count, coordinates):
+        
         new_coordinates = SetKinematicsPoseRequest()
         new_coordinates.end_effector_name = "gripper"
-        new_coordinates.path_time = 2.0
-        # Obtain current gripper position
-        new_coordinates.kinematics_pose.pose = self.gripper_pose.pose
+        new_coordinates.path_time = 2.5
+        
+        
         new_coordinates.kinematics_pose.pose.position.x = coordinates[0]
-        # new_coordinates.kinematics_pose.pose.position.x = coordinates[0]
         new_coordinates.kinematics_pose.pose.position.y = coordinates[1]
-        # new_coordinates.kinematics_pose.pose.position.z = coordinates[2]
+        new_coordinates.kinematics_pose.pose.position.z = coordinates[2]
+        # # Obtain current gripper position
+        # new_coordinates.kinematics_pose.pose = self.gripper_pose.pose
+        # threshold = 0.01
+        # rospy.loginfo("Target: {} {} {}".format(coordinates[0], coordinates[1], coordinates[2]))
+        # multiplier = 20
+        # while (abs(coordinates[0] - self.gripper_pose.pose.position.x ) > threshold and
+        #         abs(coordinates[1] - self.gripper_pose.pose.position.y ) > threshold and
+        #         abs(coordinates[2] - self.gripper_pose.pose.position.z ) > threshold and multiplier > 0):
+
+        #     if(coordinates[0] - self.gripper_pose.pose.position.x > 0):
+        #         new_coordinates.kinematics_pose.pose.position.x = round(new_coordinates.kinematics_pose.pose.position.x + (coordinates[0] / multiplier), 3)
+        #     else:
+        #         new_coordinates.kinematics_pose.pose.position.x = round(new_coordinates.kinematics_pose.pose.position.x - (coordinates[0] / multiplier), 3)
+
+        #     if abs(new_coordinates.kinematics_pose.pose.position.x) > abs(coordinates[0]):
+        #         new_coordinates.kinematics_pose.pose.position.x = coordinates[0]
+
+        #     # new_coordinates.kinematics_pose.pose.position.y = round(coordinates[1] / multiplier, 3)
+        #     # new_coordinates.kinematics_pose.pose.position.z = round(coordinates[2] / multiplier, 3)
+            
+
+            
+        #     try:
+        #         rospy.loginfo("{} Trying to reach target {} at x: {} y: {} z: {}".format(multiplier, count,
+        #             new_coordinates.kinematics_pose.pose.position.x,
+        #             new_coordinates.kinematics_pose.pose.position.y,
+        #             new_coordinates.kinematics_pose.pose.position.z
+        #         ))
+        #         resp = self.set_task_space_position(new_coordinates)
+        #         rospy.loginfo(resp)
+        #         if resp.is_planned == True:
+        #             rospy.sleep(0.3)
+
+        #     except rospy.ServiceException as e:
+        #         print ("Service call failed: ()".format(e))
+            
+        #     multiplier = multiplier - 1
+
         try:
-            rospy.loginfo("Trying to reach target {} at x: {} y: {} z: {}".format(count,
+            rospy.loginfo("    Trying to reach target {} at x: {} y: {} z: {}".format(count,
                 new_coordinates.kinematics_pose.pose.position.x,
                 new_coordinates.kinematics_pose.pose.position.y,
                 new_coordinates.kinematics_pose.pose.position.z
             ))
-            # print(abs(self.gripper_pose.pose.position.y - new_coordinates.kinematics_pose.pose.position.y))
-            # while(abs(self.gripper_pose.pose.position.y - new_coordinates.kinematics_pose.pose.position.y) > 0.01):
-            #     print(abs(self.gripper_pose.pose.position.y - new_coordinates.kinematics_pose.pose.position.y))
+            # Try to reach coordinates without any path planning
+            resp = self.set_task_space_position(new_coordinates)
+            # rospy.loginfo(resp)
+            if resp.is_planned == True:
+                rospy.sleep(2.5)
+                rospy.loginfo("        Successfully reached all coordinates")
+            else:
+                rospy.loginfo("        Failed to achieve x,y,z coordinates, trying with x and y")
+                # Try to reach Y and x Coordinates
+                # Obtain current gripper position and only set x and y
+                new_coordinates.kinematics_pose.pose = self.gripper_pose.pose
+                new_coordinates.kinematics_pose.pose.position.x = coordinates[0]
+                new_coordinates.kinematics_pose.pose.position.y = coordinates[1]
+                resp = self.set_task_space_position(new_coordinates)
+                # rospy.loginfo(resp)
+                if resp.is_planned == True:
+                    rospy.sleep(2.5)
+                    rospy.loginfo("            Trying to achieve z coordinate")
+                    new_coordinates.kinematics_pose.pose = self.gripper_pose.pose
+                    new_coordinates.kinematics_pose.pose.position.z = coordinates[2]
+                    resp = self.set_task_space_position(new_coordinates)
+                    # rospy.loginfo(resp)
+                    if resp.is_planned == True:
+                        rospy.sleep(2.5)
+                        rospy.loginfo("                Successfully reached all coordinates")
+                    else:
+                        rospy.loginfo("                Trying to achieve z with pseudo path planning")
+                        
+                        divider = 4.0
+                        increment =  round(abs(coordinates[2] - self.gripper_pose.pose.position.z )/divider, 3)
+                        for i in range(int(divider)):
+                            # Get current gripper position
+                            new_coordinates.kinematics_pose.pose = self.gripper_pose.pose
+                            if coordinates[2] - self.gripper_pose.pose.position.z > 0:
+                                new_coordinates.kinematics_pose.pose.position.z = new_coordinates.kinematics_pose.pose.position.z + increment
+                            else:
+                                new_coordinates.kinematics_pose.pose.position.z = new_coordinates.kinematics_pose.pose.position.z - increment
+                            resp = self.set_task_space_position(new_coordinates)
+                            rospy.loginfo("                    Trying to reach z {}".format(new_coordinates.kinematics_pose.pose.position.z))
+                            if resp.is_planned == True:
+                                rospy.sleep(2.5)
+                                rospy.loginfo("                        Successfully reached {} point".format(i))
+                            else:
+                                rospy.loginfo("                        Unable to reach {} point {}".format(i, new_coordinates.kinematics_pose.pose.position.z))
+                        new_coordinates.kinematics_pose.pose = self.gripper_pose.pose
+                        new_coordinates.kinematics_pose.pose.position.z = new_coordinates.kinematics_pose.pose.position.z + increment
+                        resp = self.set_task_space_position(new_coordinates)
 
-            resp = self.set_task_space_position(new_coordinates)
-            rospy.loginfo(resp)
-            if resp.is_planned == True:
+                else: 
+                    rospy.loginfo("            Unable to reach x and y coordinates")
+
+            # new_coordinates.kinematics_pose.pose.position.z = coordinates[2]
+            # resp = self.set_task_space_position(new_coordinates)
+            # rospy.loginfo(resp)
+            # if resp.is_planned == True:
                 
-                rospy.sleep(2)
-            new_coordinates.kinematics_pose.pose.position.z = coordinates[2]
-            resp = self.set_task_space_position(new_coordinates)
-            rospy.loginfo(resp)
-            if resp.is_planned == True:
-                
-                rospy.sleep(2)
+            #     rospy.sleep(2)
 
         except rospy.ServiceException as e:
             print ("Service call failed: ()".format(e))
@@ -116,7 +196,7 @@ class Robot:
             arg.path_time                   = 2.5
             resp = self.set_joint_space_position(arg)
             rospy.sleep(2.5)
-            rospy.loginfo("Robot succesfully sent to home position")
+            rospy.loginfo("        Robot succesfully sent to home position")
         except rospy.ServiceException as e:
             print ("Service call failed: ({})".format(e))
 
