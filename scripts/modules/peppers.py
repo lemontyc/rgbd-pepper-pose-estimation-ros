@@ -44,6 +44,7 @@ class Peppers:
         peduncle_y = peduncle_center[1]
         radians = math.atan2(peduncle_y - pepper_y, peduncle_x - pepper_x)
         return math.degrees(radians)
+        return radians
 
     def read_json_data(self, color_image_frame_number):
         file_name = self.json_file[0]

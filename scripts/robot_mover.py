@@ -15,8 +15,9 @@ class Robot:
         self.sub_gripper_pose   = rospy.Subscriber(topics[1], KinematicsPose, self.gripper_pose_callback)
         self.sub_pepper_bboxes  = rospy.Subscriber(topics[2], BoundingBoxArray, self.pepper_bboxes_callback)
 
-        self.ser_task_space     = rospy.wait_for_service(services[0])
-        self.ser_joint_space    = rospy.wait_for_service(services[1])
+        self.ser_task_space_position        = rospy.wait_for_service(services[0])
+        self.ser_task_space_orientation     = rospy.wait_for_service(services[1])
+        self.ser_joint_space                = rospy.wait_for_service(services[2])
 
         # self.timer_reset = rospy.Timer(rospy.Duration(15), self.timer_reset_callback)
 
@@ -26,7 +27,12 @@ class Robot:
             print ("Service startup failed: ({})".format(e))
 
         try:
-            self.set_joint_space_position   = rospy.ServiceProxy(services[1], SetJointPosition)
+            self.set_task_space_orientation   = rospy.ServiceProxy(services[1], SetKinematicsPose)
+        except rospy.ServiceException as e:
+            print ("Service startup failed: ({})".format(e))
+
+        try:
+            self.set_joint_space_position   = rospy.ServiceProxy(services[2], SetJointPosition)
         except rospy.ServiceException as e:
             print ("Service startup failed: ({})".format(e))
 
@@ -66,9 +72,14 @@ class Robot:
             # pprint.pprint(targets)
 
             for count, target in enumerate(targets.boxes):
+                # If target is a peduncle, it has an orientation, rotate accordingly
+                if target.label == 2:
+                    self.rotate_gripper(count, target.pose.orientation)
+
                 self.move_to_coordinates(count, [   round(target.pose.position.x, 3),
                                                     round(target.pose.position.y, 3),
                                                     round(target.pose.position.z, 3)])
+                
                 self.home_position()
 
     def move_to_coordinates(self, count, coordinates):
@@ -81,44 +92,7 @@ class Robot:
         new_coordinates.kinematics_pose.pose.position.x = coordinates[0]
         new_coordinates.kinematics_pose.pose.position.y = coordinates[1]
         new_coordinates.kinematics_pose.pose.position.z = coordinates[2]
-        # # Obtain current gripper position
-        # new_coordinates.kinematics_pose.pose = self.gripper_pose.pose
-        # threshold = 0.01
-        # rospy.loginfo("Target: {} {} {}".format(coordinates[0], coordinates[1], coordinates[2]))
-        # multiplier = 20
-        # while (abs(coordinates[0] - self.gripper_pose.pose.position.x ) > threshold and
-        #         abs(coordinates[1] - self.gripper_pose.pose.position.y ) > threshold and
-        #         abs(coordinates[2] - self.gripper_pose.pose.position.z ) > threshold and multiplier > 0):
-
-        #     if(coordinates[0] - self.gripper_pose.pose.position.x > 0):
-        #         new_coordinates.kinematics_pose.pose.position.x = round(new_coordinates.kinematics_pose.pose.position.x + (coordinates[0] / multiplier), 3)
-        #     else:
-        #         new_coordinates.kinematics_pose.pose.position.x = round(new_coordinates.kinematics_pose.pose.position.x - (coordinates[0] / multiplier), 3)
-
-        #     if abs(new_coordinates.kinematics_pose.pose.position.x) > abs(coordinates[0]):
-        #         new_coordinates.kinematics_pose.pose.position.x = coordinates[0]
-
-        #     # new_coordinates.kinematics_pose.pose.position.y = round(coordinates[1] / multiplier, 3)
-        #     # new_coordinates.kinematics_pose.pose.position.z = round(coordinates[2] / multiplier, 3)
-            
-
-            
-        #     try:
-        #         rospy.loginfo("{} Trying to reach target {} at x: {} y: {} z: {}".format(multiplier, count,
-        #             new_coordinates.kinematics_pose.pose.position.x,
-        #             new_coordinates.kinematics_pose.pose.position.y,
-        #             new_coordinates.kinematics_pose.pose.position.z
-        #         ))
-        #         resp = self.set_task_space_position(new_coordinates)
-        #         rospy.loginfo(resp)
-        #         if resp.is_planned == True:
-        #             rospy.sleep(0.3)
-
-        #     except rospy.ServiceException as e:
-        #         print ("Service call failed: ()".format(e))
-            
-        #     multiplier = multiplier - 1
-
+    
         try:
             rospy.loginfo("    Trying to reach target {} at x: {} y: {} z: {}".format(count,
                 new_coordinates.kinematics_pose.pose.position.x,
@@ -130,7 +104,7 @@ class Robot:
             # rospy.loginfo(resp)
             if resp.is_planned == True:
                 rospy.sleep(2.5)
-                rospy.loginfo("        Successfully reached all coordinates")
+                rospy.loginfo("        Successfully reached all coordinates\n")
             else:
                 rospy.loginfo("        Failed to achieve x,y,z coordinates, trying with x and y")
                 # Try to reach Y and x Coordinates
@@ -149,7 +123,7 @@ class Robot:
                     # rospy.loginfo(resp)
                     if resp.is_planned == True:
                         rospy.sleep(2.5)
-                        rospy.loginfo("                Successfully reached all coordinates")
+                        rospy.loginfo("                Successfully reached all coordinates\n")
                     else:
                         rospy.loginfo("                Trying to achieve z with pseudo path planning")
                         
@@ -166,15 +140,15 @@ class Robot:
                             rospy.loginfo("                    Trying to reach z {}".format(new_coordinates.kinematics_pose.pose.position.z))
                             if resp.is_planned == True:
                                 rospy.sleep(2.5)
-                                rospy.loginfo("                        Successfully reached {} point".format(i))
+                                rospy.loginfo("                        Successfully reached {} point\n".format(i))
                             else:
-                                rospy.loginfo("                        Unable to reach {} point {}".format(i, new_coordinates.kinematics_pose.pose.position.z))
+                                rospy.loginfo("                        Unable to reach {} point {}\n".format(i, new_coordinates.kinematics_pose.pose.position.z))
                         new_coordinates.kinematics_pose.pose = self.gripper_pose.pose
                         new_coordinates.kinematics_pose.pose.position.z = new_coordinates.kinematics_pose.pose.position.z + increment
                         resp = self.set_task_space_position(new_coordinates)
 
                 else: 
-                    rospy.loginfo("            Unable to reach x and y coordinates")
+                    rospy.loginfo("            Unable to reach x and y coordinates\n")
 
             # new_coordinates.kinematics_pose.pose.position.z = coordinates[2]
             # resp = self.set_task_space_position(new_coordinates)
@@ -183,6 +157,31 @@ class Robot:
                 
             #     rospy.sleep(2)
 
+        except rospy.ServiceException as e:
+            print ("Service call failed: ()".format(e))
+
+    def rotate_gripper(self, count, orientation):
+        new_orientation = SetKinematicsPoseRequest()
+        new_orientation.end_effector_name = "gripper"
+        new_orientation.path_time = 3.0
+
+        new_orientation.kinematics_pose.pose.orientation = orientation
+
+        try:
+            rospy.loginfo("    Trying to reach orientation of {} at x: {} y: {} z: {} w: {}".format(count,
+               new_orientation.kinematics_pose.pose.orientation.x,
+               new_orientation.kinematics_pose.pose.orientation.y,
+               new_orientation.kinematics_pose.pose.orientation.z,
+               new_orientation.kinematics_pose.pose.orientation.w,
+            ))
+            # Try to reach coordinates without any path planning
+            resp = self.set_task_space_orientation(new_orientation)
+            # rospy.loginfo(resp)
+            if resp.is_planned == True:
+                rospy.sleep(2.5)
+                rospy.loginfo("        Successfully reached orientation\n")
+            else:
+                rospy.loginfo("        Unable to reach orientation\n")
         except rospy.ServiceException as e:
             print ("Service call failed: ()".format(e))
 
@@ -196,7 +195,7 @@ class Robot:
             arg.path_time                   = 2.5
             resp = self.set_joint_space_position(arg)
             rospy.sleep(2.5)
-            rospy.loginfo("        Robot succesfully sent to home position")
+            rospy.loginfo("        Robot succesfully sent to home position\n\n")
         except rospy.ServiceException as e:
             print ("Service call failed: ({})".format(e))
 
@@ -220,9 +219,10 @@ def main():
     pepper_bboxes               = '/peppers/bbox_3D'
     topics                      = [states_topic, gripper_pose_topic, pepper_bboxes]
 
-    robot_task_space_service    =   '/goal_task_space_path_position_only'
-    robot_joint_space_service   =   '/goal_joint_space_path'
-    services                    = [robot_task_space_service, robot_joint_space_service]
+    robot_task_space_position_service       =   '/goal_task_space_path_position_only'
+    robot_task_space_orientation_service    =   '/goal_task_space_path_orientation_only'
+    robot_joint_space_service               =   '/goal_joint_space_path'
+    services                                = [robot_task_space_position_service, robot_task_space_orientation_service, robot_joint_space_service]
 
     node = Robot(topics, services)
 

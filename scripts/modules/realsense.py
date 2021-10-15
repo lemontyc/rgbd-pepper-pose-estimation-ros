@@ -2,7 +2,9 @@ import tf2_ros
 import rospy
 from cv_bridge import CvBridgeError
 import cv2
+import math
 from tf2_geometry_msgs import PointStamped
+from tf.transformations import quaternion_from_euler
 from jsk_recognition_msgs.msg import BoundingBox
 import pyrealsense2 as rs2
 if (not hasattr(rs2, 'intrinsics')):
@@ -85,7 +87,7 @@ class Realsense:
                         coordinates = self.tf_optical_frame_to_link1(coordinates)
                         
                         bbox.header.frame_id = "link1"
-                        bbox.pose.position.x = coordinates[0]
+                        bbox.pose.position.x = coordinates[0] 
                         bbox.pose.position.y = coordinates[1] + 0.04
                         bbox.pose.position.z = coordinates[2]
                         bbox.pose.orientation.w = 1
@@ -103,6 +105,18 @@ class Realsense:
                             # Reset bbox for peduncle
                             bbox = BoundingBox()
                             peduncle_2d_data  = pepper_data["2d_info"]["peduncle"]
+                            
+                            # Get angle if exists
+                            pepper_angle = pepper_data["2d_info"]["angle"]
+                            pepper_angle = pepper_angle * -1
+                            pepper_angle = pepper_angle + 90
+                            q = quaternion_from_euler(0, math.radians(pepper_angle), 0)
+                            bbox.pose.orientation.x = q[0]
+                            bbox.pose.orientation.y = q[1]
+                            bbox.pose.orientation.z = q[2]
+                            bbox.pose.orientation.w = q[3]
+                            
+                            # print(bbox.pose.orientation)
 
                             xmin_depth = int((peduncle_2d_data["x_min"] * peppers.expected))
                             ymin_depth = int((peduncle_2d_data["y_min"] * peppers.expected))
@@ -127,7 +141,6 @@ class Realsense:
                             bbox.pose.position.x = coordinates[0]
                             bbox.pose.position.y = bboxes.boxes[-1].pose.position.y 
                             bbox.pose.position.z = coordinates[2]
-                            bbox.pose.orientation.w = 1
 
                             bbox.dimensions.z = (ymax_depth - ymin_depth)/2000.0
                             bbox.dimensions.x = (xmax_depth - xmin_depth)/2000.0 
