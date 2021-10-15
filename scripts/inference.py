@@ -127,7 +127,7 @@ class ImageInference:
 
 
 def main():
-    M_RCNN_PATH = '/home/luis/GitHub/rgbd-pepper-pose-estimation/Mask_RCNN/src/Mask_RCNN/datasets/process'
+    M_RCNN_PATH = '/home/luis/GitHub/rgbd-pepper-pose-estimation/workspace/datasets/process'
     M_RCNN_JSON_PATH = 'boxes'
 
     rgb_image_topic         = 'rgb_image'
