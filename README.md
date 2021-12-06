@@ -71,6 +71,9 @@ rosrun rgbd-pepper-pose-estimation-ros robot_mover.py
 
 For the Mask R-CNN container which includes this repository as a sub-module, as well as much more stuff, click [here](https://github.com/lemontyc/rgbd-pepper-pose-estimation).
 
+To modify the camera link, position, and orientation wrt the robotic arm, edit the ``Realsense Camera Joint Position`` at the 
+``urdf/open_manipulator.urdf.xacro`` file.
+
 
 ## Meta
 
