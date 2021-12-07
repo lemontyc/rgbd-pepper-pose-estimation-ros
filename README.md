@@ -50,22 +50,22 @@ ROS dependencies should be installed with rosdep. Additional dependencies are:
 
 ## Running
 1. Download [this](https://github.com/lemontyc/rgbd-pepper-pose-estimation) repository to your computer. And run:
-```sh
-git clone https://github.com/lemontyc/rgbd-pepper-pose-estimation
-cd rgbd-pepper-pose-estimation
-git submodule update --init --recursive
-```
+    ```sh
+    git clone https://github.com/lemontyc/rgbd-pepper-pose-estimation
+    cd rgbd-pepper-pose-estimation
+    git submodule update --init --recursive
+    ```
 
 2. Copy the contents of ``ROS/`` to your local ``<ROS_workspace/src>``, then:
-```sh
-catkin_make
-source devel.setup.bash
-```
+    ```sh
+    catkin_make
+    source devel.setup.bash
+    ```
 3. Plugin the RealSense D435i camera and run:
-```sh
-roslaunch rgbd-pepper-pose-estimation open_manipulator_d435i_rviz_inference.launch
-rosrun rgbd-pepper-pose-estimation-ros robot_mover.py
-```
+    ```sh
+    roslaunch rgbd-pepper-pose-estimation open_manipulator_d435i_rviz_inference.launch
+    rosrun rgbd-pepper-pose-estimation-ros robot_mover.py
+    ```
 
 # More Information
 
